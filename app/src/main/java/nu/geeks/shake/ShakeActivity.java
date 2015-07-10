@@ -49,10 +49,6 @@ public class ShakeActivity extends Activity implements SensorEventListener {
     //Den aktuella tärningen efter skaket. Börjar på 5.
     int diceValue = 5;
 
-    //Sparar undan tärningens orginalposition så jag kan återställa den sen.
-    float origX;
-    float origY;
-
     float change = 125;
 
     int index = 0;
@@ -82,17 +78,15 @@ public class ShakeActivity extends Activity implements SensorEventListener {
 
         dice = (ImageView) findViewById(R.id.dice);
 
-        Log.d(TAG, "x: " + origX + " y: " + origY);
-
 
         //Animera tärningen genom att använda en countdownTimer. Finns säkert andra bättre sätt,
         // men jag pallar inte googla. :)
-        //Den kör i 5 sek (5000 ms) och uppdaterar bilden i 25fps (40 ggr per sek).
+        //Den kör i 5 sek (5000 ms) och uppdaterar bilden i 25fps (var 40e millisekund).
         //Deklarereas bara här, aktiveras genom att köra timer.start();
         animationTimer = new CountDownTimer(5001, 40) {
             @Override
             public void onTick(long millisUntilFinished) {
-                //Sätt rotationen till
+                //Varje tick, uppdatera animationen på tärningen.
                 animateDice(dice.getRotation(), millisUntilFinished);
             }
 
@@ -144,7 +138,7 @@ public class ShakeActivity extends Activity implements SensorEventListener {
         for(int i = 0; i < 10; i++ ) recentValues.set(i, new float[]{0,0,0});
     }
 
-    //Overrida den här och den under när vi implementar SensorEventListener.
+    //Overrida den här när vi implementar SensorEventListener.
     @Override
     public void onSensorChanged(SensorEvent event) {
         //Vi kör bara om knappan är i på-läge.
@@ -229,7 +223,15 @@ public class ShakeActivity extends Activity implements SensorEventListener {
 
 
     }
+    @Override
+    protected void onPause() {
+        //Upptäckte att appen fortsatte spy ut data även efter att den stängdes ner.
+        //Bäst att förhindra det genom att avregistrera listenern.
+        sensorManager.unregisterListener(this);
+        super.onDestroy();
+    }
 
+    //Måset också overridas när vi implementerar, men vi kan skita i den.
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
@@ -246,11 +248,5 @@ public class ShakeActivity extends Activity implements SensorEventListener {
     return false;
     }
 
-    @Override
-    protected void onPause() {
-        //Upptäckte att appen fortsatte spy ut data även efter att den stängdes ner.
-        //Bäst att förhindra det genom att avregistrera listenern.
-        sensorManager.unregisterListener(this);
-        super.onDestroy();
-    }
+
 }
