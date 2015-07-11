@@ -21,222 +21,147 @@ import android.widget.ToggleButton;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class ShakeActivity extends Activity implements SensorEventListener {
+public class ShakeActivity extends Activity {
 
     static final String TAG = "ShakeActivity";
 
-    ToggleButton skak;
-    ImageView dice;
-    SensorManager sensorManager;
-    ArrayList<float[]> recentValues;
-    TextView diceText;
+    private ToggleButton skak;
 
-    CountDownTimer animationTimer;
-    CountDownTimer resetTimer;
+    private ImageView dices[] = new ImageView[6];
 
-    RelativeLayout screen;
+    private RelativeLayout screen;
+    private DiceAnimator[] diceAnimators; //En diceAnimator per tärning.
+    private ShakeDetector shakeDetector;
 
-    //En array med bilderna till alla tärningar.
-    int[] diceValues = {
-            R.drawable._1,
-            R.drawable._2,
-            R.drawable._3,
-            R.drawable._4,
-            R.drawable._5,
-            R.drawable._6
+    //Offset används för att placera ut tärningarna när man vill kasta igen.
+    private int[][] dicesOffsets = {
+            {-100, -50},
+            {0, -50},
+            {100, -50},
+            {-100, 50},
+            {0, 50},
+            {100, 50}
     };
 
-    //Den aktuella tärningen efter skaket. Börjar på 5.
-    int diceValue = 5;
-
-    float change = 125;
-
-    int index = 0;
+    //Grafiken på tärningarna.
+    int[] diceDrawables = {
+                R.drawable._1,
+                R.drawable._2,
+                R.drawable._3,
+                R.drawable._4,
+                R.drawable._5,
+                R.drawable._6
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_shake);
 
-        //En text så vi ser vad tärningen blev.
-        diceText = (TextView) findViewById(R.id.diceText);
-
-        //Behöver något sätt att spara undan några gamla värden bara.
-        recentValues = new ArrayList<float[]>();
-        for(int i = 0; i < 10; i++ ) recentValues.add(new float[]{0, 0, 0});//Fyller arrayen med 0.
-
         //En på/av-knapp för skakningen.
         skak = (ToggleButton) findViewById(R.id.skakOnOff);
 
-        //Tar fram själva relativeLayout-en också, vill veta var mitten på skärmen är.
+        //Initierar alla tärningar
+        dices[0] =  (ImageView) findViewById(R.id.dice1);
+        dices[1] =  (ImageView) findViewById(R.id.dice2);
+        dices[2] =  (ImageView) findViewById(R.id.dice3);
+        dices[3] =  (ImageView) findViewById(R.id.dice4);
+        dices[4] =  (ImageView) findViewById(R.id.dice5);
+        dices[5] =  (ImageView) findViewById(R.id.dice6);
+
+
+        //Tar fram själva relativeLayout-en också. Behövs i DiceAnimator.
         screen = (RelativeLayout) findViewById(R.id.layout);
+        diceAnimators = new DiceAnimator[6];
 
-        //Ställ in sensormanager och sätt den att titta på accelerometern.
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
+        //Initierar alla sex diceAnimators. Lägger till grafiken separat också, så det
+        //ska bli enklare för dig att byta ut om du känner för det.
+        for(int i = 0; i < 6; i++){
+            diceAnimators[i] = new DiceAnimator(this, dices[i], screen, dicesOffsets[i]);
+            diceAnimators[i].addDrawables(diceDrawables);
+        }
 
+        //Skapar shakeDetecorn
+        shakeDetector = new ShakeDetector(this);
 
-        dice = (ImageView) findViewById(R.id.dice);
+        //Aktiverar shakedetector.
+        shakeDetector.enableShakeDetector();
 
-
-        //Animera tärningen genom att använda en countdownTimer. Finns säkert andra bättre sätt,
-        // men jag pallar inte googla. :)
-        //Den kör i 5 sek (5000 ms) och uppdaterar bilden i 25fps (var 40e millisekund).
-        //Deklarereas bara här, aktiveras genom att köra timer.start();
-        animationTimer = new CountDownTimer(5001, 40) {
+        //Ny tråd, som bara väntar på att ett skak ska göras. Dör när shakeDetector avregistreas.
+        final Thread shakeDetect = new Thread(new Runnable() {
             @Override
-            public void onTick(long millisUntilFinished) {
-                //Varje tick, uppdatera animationen på tärningen.
-                animateDice(dice.getRotation(), millisUntilFinished);
-            }
-
-            @Override
-            public void onFinish() {
-
-            }
-        };
-
-
-
-        //En till animation, som blinkar tärningen och återställer den när man klickar på knappen.
-        resetTimer = new CountDownTimer(2500, 500) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                if(dice.getVisibility() == View.VISIBLE) dice.setVisibility(View.INVISIBLE);
-                else if(dice.getVisibility() == View.INVISIBLE) dice.setVisibility(View.VISIBLE);
-            }
-
-            @Override
-            public void onFinish() {
+            public void run() {
+                while(shakeDetector.isEnabled()) {
+                    while (!shakeDetector.isShakeDetected());
+                    Log.d(TAG, "shake!");
+                    shakeDetector.disableShakeDetector();
+                    handleShake();
+                }
 
             }
-        };
+        });
 
+        shakeDetect.start();
+
+        //Om man klickar på knappen
         skak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(skak.isChecked()){
-                    //Återställer tärningens position och kör igång timern som blinkar den.
-                    dice.setX(screen.getWidth() / 2 - dice.getWidth() / 2);
-                    dice.setY(screen.getHeight() / 2 - dice.getHeight() / 2);
-                    emptyRecentValues();
+                    resetDices();
 
-                    dice.setRotation(0);
-                    animationTimer.cancel();
-
-                    resetTimer.start();
+                    shakeDetector.enableShakeDetector();
+                }else{
+                    shakeDetector.disableShakeDetector();
                 }
             }
         });
 
-
-
+        resetDices();
 
     }
 
-    private void emptyRecentValues() {
-        for(int i = 0; i < 10; i++ ) recentValues.set(i, new float[]{0,0,0});
+    /**
+     * Återställer alla tärningar. Placerar dem baserat på offsetten som skickats till
+     * varje diceAnimator.
+     */
+    private void resetDices() {
+        for(int i = 0; i < 6; i++){
+            diceAnimators[i].resetAnimation(dices[i]);
+        }
     }
 
-    //Overrida den här när vi implementar SensorEventListener.
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        //Vi kör bara om knappan är i på-läge.
-        if(skak.isChecked()){
-            addAndCheckArray(event.values);
+    /**
+     * Hantera vad som ska hända när vi skakar mobilen. Samma metod kan anropas vid ett
+     * knapptryck istället om man inte vill använda skak-funktionen.
+     *
+     */
+    private void handleShake() {
+        for(DiceAnimator d : diceAnimators){
+            d.startAnimation();
         }
 
-    }
-
-    private void addAndCheckArray(float[] values) {
-        //Vi håller 10 senaste värden i arrayen ba.
-        recentValues.set(index++ % 10, values);
-
-        //Fullösning här, men vi vill inte att Int-en når maxvalue.
-        //Vet inte om det behövs alls egentligen.
-        if(index == Integer.MAX_VALUE -1) index = 0;
-
-        //Räkna hur många värden i arrayen som är höga.
-        int highValues = 0;
-
-        for(float[] vals : recentValues){
-
-            //Något av värdena kommer alltid att vara som minst runt 9.82 (gravitationsaccelerationen),
-            // beroende på hur mobilen är vinklad för tillfället.
-
-            if(vals[0] > 15 || vals[0] < -15) highValues++;
-            if(vals[1] > 15 || vals[1] < -15) highValues++;
-            if(vals[2] > 15 || vals[2] < -15) highValues++;
-
-            //Log.d(TAG, "[0]: " + vals[0] + "[1]: " + vals[1] + "[2]: " + vals[2]);
-        }
-
-        //Om nog många av värdena i arrayen är höga (alltså att enheten har haft en accerlation nog
-        // mycket under senaste tiden), räknar vi det som ett skak.
-        if(highValues > 5) {
-            Log.d(TAG, "SKAK! " + highValues);
-            //Skaket är registrerat, slå av funktionen.
+        //Drygt det här, men om man vill ändra grafik från en annan tråd än main-tråden,
+        //så måste man manuellt lägga in händelsen så att den körs på main-tråden.
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
             skak.setChecked(false);
-            //Töm arrayen
-            emptyRecentValues();
-
-            //Animera tärningen lite.
-            startAnimation();
-        }
-
-    }
-
-    private void startAnimation() {
-
-        //Bilden kommer att uppdateras 125 ggr (5000 / 40 = 125).
-        //Det kändes lagom att låta den snurra 37.5 grader första gången, sen mindre och mindre
-        //varje gång, för att sista gången sluta på 0)
-
-        change = 37.5f;
-        animationTimer.start();
-
-    }
-
-    private void animateDice(float rotation, long millis) {
-
-        dice.setRotation( ( dice.getRotation() + change ) );
-        change -= 0.3; //Dra bort .3 från change. 0.3 * 125 = 37.5.
-        //Log.d(TAG, ""+ dice.getRotation());
-
-        Random rand = new Random();
-
-        //Vi kan låta den studsa runt lite också.
-        dice.setX(dice.getX() + (rand.nextInt(8) - 4) * (change / 20));
-        dice.setY(dice.getY() + (rand.nextInt(8) - 4) * (change / 20));
-
-        if(millis > 1000){
-            //Om det är mer än en sekund kvar av animationen, byt sida på tärningen.
-            int diceNumber = rand.nextInt(6);
-
-            dice.setBackground(getResources().getDrawable(diceValues[diceNumber]));
-            //Log.d(TAG, "Byter bild");
-
-            diceValue = diceNumber + 1;
-            diceText.setText("" + diceValue);
-        }
-
+            }
+        });
 
 
     }
+
+    /**
+     * Behöver döda tråden på något sätt, och döda själva listenern som läser av accelerometern.
+     */
     @Override
-    protected void onPause() {
-        //Upptäckte att appen fortsatte spy ut data även efter att den stängdes ner.
-        //Bäst att förhindra det genom att avregistrera listenern.
-        sensorManager.unregisterListener(this);
+    protected void onDestroy() {
+        Log.d(TAG, "shakeDetector unregistered");
+        shakeDetector.unregisterListener();
         super.onDestroy();
     }
-
-    //Måset också overridas när vi implementerar, men vi kan skita i den.
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
