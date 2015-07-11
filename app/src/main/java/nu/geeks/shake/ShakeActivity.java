@@ -31,7 +31,7 @@ public class ShakeActivity extends Activity {
 
     private RelativeLayout screen;
     private DiceAnimator[] diceAnimators; //En diceAnimator per tärning.
-    private ShakeDetector shakeDetector;
+    private ShakeDetect shakeDetector;
 
     //Offset används för att placera ut tärningarna när man vill kasta igen.
     private int[][] dicesOffsets = {
@@ -82,7 +82,7 @@ public class ShakeActivity extends Activity {
         }
 
         //Skapar shakeDetecorn
-        shakeDetector = new ShakeDetector(this);
+        shakeDetector = new ShakeDetect(this);
 
         //Aktiverar shakedetector.
         shakeDetector.enableShakeDetector();
