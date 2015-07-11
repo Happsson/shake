@@ -27,6 +27,8 @@ public class ShakeActivity extends Activity {
 
     private ToggleButton skak;
 
+    private Button skakKnapp;
+
     private ImageView dices[] = new ImageView[6];
 
     private RelativeLayout screen;
@@ -60,6 +62,10 @@ public class ShakeActivity extends Activity {
 
         //En på/av-knapp för skakningen.
         skak = (ToggleButton) findViewById(R.id.skakOnOff);
+
+        skakKnapp = (Button) findViewById(R.id.skakKnapp);
+
+
 
         //Initierar alla tärningar
         dices[0] =  (ImageView) findViewById(R.id.dice1);
@@ -114,6 +120,14 @@ public class ShakeActivity extends Activity {
                 }else{
                     shakeDetector.disableShakeDetector();
                 }
+            }
+        });
+
+        skakKnapp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                shakeDetector.disableShakeDetector();
+                handleShake();
             }
         });
 
