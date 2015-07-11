@@ -127,6 +127,7 @@ public class DiceAnimator {
      */
     public void resetAnimation(ImageView dice){
         if(!isAnimating) {
+            diceAnimation.cancel();
             dice.setX((parentLayout.getWidth() / 2) - dice.getWidth() / 2 + offset[0]);
             dice.setY((parentLayout.getHeight() / 2) - dice.getHeight() / 2 + offset[1]);
             dice.setRotation(0);
