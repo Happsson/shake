@@ -21,6 +21,7 @@ public class DiceAnimator {
     private int[] offset;
     private int[] diceValues;
     private boolean isAnimating;
+    private int currentValue;
 
     /**
      * Konstruktor för diceAnimator.
@@ -35,13 +36,13 @@ public class DiceAnimator {
         this.context = context;
         this.offset = offset;
         final ImageView dice1 = dice;
+        currentValue = 5; //Tärningen börjar på fem. Ändra den här om det inte stämmer.
 
         isAnimating = false;
 
         diceAnimation = new CountDownTimer(5001, 40) {
             @Override
             public void onTick(long millisUntilFinished) {
-
                 animateDice(millisUntilFinished, dice1);
             }
 
@@ -112,11 +113,15 @@ public class DiceAnimator {
         if(millis > 1000){
             //Om det är mer än en sekund kvar av animationen, byt sida på tärningen.
             int diceNumber = rand.nextInt(6);
-
+            currentValue = diceNumber+1;
             dice.setBackground(context.getResources().getDrawable(diceValues[diceNumber]));
             //Log.d(TAG, "Byter bild");
 
         }
+    }
+
+    public int getDiceValue(){
+        return currentValue;
     }
 
     /**

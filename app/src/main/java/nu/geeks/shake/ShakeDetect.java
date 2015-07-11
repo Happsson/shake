@@ -11,7 +11,6 @@ import java.util.ArrayList;
 /**
  * Created by Ali on 15-07-10.
  *
- *
  * The shakeDetector is able to detect when the user shakes the device.
  *
  * It looks at the accelerometer on all three axis.
@@ -43,6 +42,7 @@ public class ShakeDetect implements SensorEventListener {
     public ShakeDetect(Context context){
         shakeEnabled = false;
         isEnabled = true;
+
         manager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         manager.registerListener(this, manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
 

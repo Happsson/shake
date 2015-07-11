@@ -32,7 +32,9 @@ public class ShakeActivity extends Activity {
     private ImageView dices[] = new ImageView[6];
 
     private RelativeLayout screen;
+
     private DiceAnimator[] diceAnimators; //En diceAnimator per tärning.
+
     private ShakeDetect shakeDetector;
 
     //Offset används för att placera ut tärningarna när man vill kasta igen.
@@ -78,14 +80,19 @@ public class ShakeActivity extends Activity {
 
         //Tar fram själva relativeLayout-en också. Behövs i DiceAnimator.
         screen = (RelativeLayout) findViewById(R.id.layout);
+
         diceAnimators = new DiceAnimator[6];
 
         //Initierar alla sex diceAnimators. Lägger till grafiken separat också, så det
         //ska bli enklare för dig att byta ut om du känner för det.
         for(int i = 0; i < 6; i++){
+
             diceAnimators[i] = new DiceAnimator(this, dices[i], screen, dicesOffsets[i]);
+
             diceAnimators[i].addDrawables(diceDrawables);
         }
+
+
 
         //Skapar shakeDetecorn
         shakeDetector = new ShakeDetect(this);
@@ -98,6 +105,7 @@ public class ShakeActivity extends Activity {
             @Override
             public void run() {
                 while(shakeDetector.isEnabled()) {
+
                     while (!shakeDetector.isShakeDetected());
                     Log.d(TAG, "shake!");
                     shakeDetector.disableShakeDetector();
